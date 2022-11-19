@@ -1,0 +1,302 @@
+#!/bin/bash
+####################
+### git-shortcut ###
+####################
+
+#tmtemp for readme
+# To ensure this script functions for each new bash shell:
+# cd ~/
+# touch .bash_profile
+# Edit .bash_profile and add "export PATH=$PATH:/your-directory/git-custom-commands"
+
+#############
+# FUNCTIONS #
+#############
+
+### findShortcut
+# Params:   num = Shortcut number
+# Returns:  0 = error
+#           else = returns line found
+findShortcut()
+{
+   local num=$1
+   # Check number validity
+   if [[ -n ${num//[0-9]/} ]]; then
+      # Not integer, exit
+      printf "\n%s\n" "Error: Non-integer input \"$num\"" > "$(tty)"
+      return 0
+   elif [ -z "$num" ]; then
+      # Empty (cancel)
+      printf "\n%s\n" "Exiting..." > "$(tty)"
+      return 0
+   else
+      # Integer, check if shortcut exists for number
+      local cmd=""
+      while read -r line; do
+         if [[ $line == ${num}* ]]; then
+            # Line starts with num, shortcut found
+            cmd=$line
+            # 'return' line
+            echo "$cmd"
+            exit
+         fi
+      done < "$gitDir"/shortcuts
+   fi
+   
+   # If no shortcut for that number
+   if [ -z "$cmd" ]; then
+      printf "\n%s\n" "Error: No shortcut for \"$num\"" > "$(tty)"
+      return 0
+   fi
+}
+
+### runShortcut
+# Params:   line = Entire shortcut (num and cmd)
+# Returns:  0 = error
+runShortcut()
+{
+   local line=$1
+   # Trim shortcut number from command string
+   if [[ $line =~ \:[[:space:]](.*) ]]; then
+      local cmd=${BASH_REMATCH[1]}
+   else
+      printf "%s\n" "Error: How..." > "$(tty)"
+      exit
+   fi
+   
+   # Check if cmd contains runtime parameters
+   if [[ "$cmd" =~ \<([^\<\>]+)\> ]]; then
+      printf "\n%s\n" "$cmd          [Ctrl+C to cancel | nothing to exclude param]" > "$(tty)"
+      # Read runtime params into an array
+      readarray -t paramArr <<< "$(echo "$cmd" | grep -o -P '\<([^\<\>]+)\>')"
+      # Initialize empty input array
+      local inputArr=()
+      # Loop through paramArr, adding input to inputArr
+      for i in "${paramArr[@]}"; do
+         read -r -p "Enter value for param $i:  " input
+         inputArr+=("$input")
+      done
+      
+      # Sanity check, make sure number of params and input values match
+      if [ "${#paramArr[@]}" -ne "${#inputArr[@]}" ]; then
+         printf "\n%s\n" "Error: Num params do not match." > "$(tty)"
+         exit
+      fi
+      
+      # Substitute runtime params in cmd with input values
+      for i in "${!paramArr[@]}"; do
+         # If input is non-empty, surround with ""
+         if [ -n "${inputArr[i]}" ]; then
+            inputArr[i]="\"${inputArr[i]}\""
+         fi
+         cmd="${cmd/${paramArr[i]}/${inputArr[i]}}"
+      done
+   fi
+   
+   # Run command
+   printf "\n" > "$(tty)"
+   eval "$cmd"
+}
+
+########
+# MAIN #
+########
+
+# Check if running from a git repo
+if [ "$(git rev-parse --is-inside-work-tree)" ]; then
+   gitDir="$(git rev-parse --show-toplevel)/.git"
+   touch "$gitDir"/shortcuts
+else
+   exit
+fi
+
+# Check if there are no parameters, if none, list/use shortcuts
+if [ $# -eq 0 ]; then
+   ## LIST/USE shortcuts
+   printf "%s\n\n" "Saved shortcuts:"
+   cat "$gitDir"/shortcuts
+   printf "\n%s\n" "Enter shortcut number(s) to run (space delimited) [or nothing to cancel]:"
+   # Read input into array
+   read -r -a arrIn
+   
+   # Set arrIn in case of empty input
+   arrIn[0]=${arrIn[0]:-""}
+   
+   # Loop through shortcut nums to run
+   for i in "${arrIn[@]}"; do
+      # Find if shortcut exists
+      line=$(findShortcut "$i")
+      if [ -z "$line" ]; then
+         # Exit so that following commands don't run after error
+         exit
+      else
+         # Shortcut found
+         runShortcut "$line"
+      fi
+   done
+else
+   # Check arguments
+   case $1 in
+      ## NEW shortcut
+      "-n"|"--new")
+         shift
+         # Check if run option present
+         case $1 in
+            "-r"|"--run")
+               run=true
+               cmd=$2
+               ;;
+            *)
+               run=false
+               cmd=$1
+               ;;
+         esac
+         
+         # Check if command exists
+         if [ -z "$cmd" ]; then
+            printf "\n%s\n" "Error: Missing parameter: \"command\""
+         else
+            # Get the current last shortcut num in file, incremenet for new num
+            newNum=$(awk -F: 'END{print $1+1}' "$gitDir"/shortcuts)
+            # Add to shortcut file with its number
+            printf "%s\n" "$newNum: $cmd" >> "$gitDir"/shortcuts
+            # Return number of new shortcut
+            printf "\n%s\n" "Shortcut added as #$newNum"
+            
+            # If run option enabled
+            if [ "$run" = true ]; then
+               # Run command
+               printf "\n"
+               eval "$cmd"
+            fi
+         fi
+         ;;
+         
+      ## DELETE shortcuts
+      "-d"|"--delete")
+         # List shortcuts, choose which to delete
+         printf "%s\n\n" "Saved shortcuts:"
+         cat "$gitDir"/shortcuts
+         printf "\n%s\n" "Enter shortcut number(s) to delete (space delimited) [-a for all | nothing to cancel]:"
+         read -r -a arrIn
+         
+         # Set arrIn in case of empty input
+         arrIn[0]=${arrIn[0]:-""}
+         
+         # If arrIn contains '-a' clear all shortcuts
+         if [[ "${arrIn[*]}" =~ "-a" ]]; then
+            truncate -s 0 "$gitDir"/shortcuts
+            printf "\n%s\n" "All shortcuts deleted"
+            exit
+         fi
+         
+         deleted=false
+         # Loop through shortcut nums to delete
+         for i in "${arrIn[@]}"; do
+            # Find if shortcut exists
+            line=$(findShortcut "$i")
+            if [ -z "$line" ]; then
+               # Return to previous line in terminal so that 2+ errors print w/out new-lines
+               printf "\e[1A"
+            else
+               # Shortcut found, remove line
+               sed -i "/$line/d" "$gitDir"/shortcuts
+               deleted=true
+            fi
+         done
+         printf "\n" # Formatting
+         
+         # If delete successful
+         if [ "$deleted" = true ]; then
+            # Renumber remaining shortcuts
+            # Cut current numbering
+            cut -d ':' -f 1 --complement "$gitDir"/shortcuts > shortcuts.new 
+            mv -f shortcuts.new "$gitDir"/shortcuts
+            # Renumber each line
+            nl -nln -w1 -s ':' "$gitDir"/shortcuts > shortcuts.new
+            mv -f shortcuts.new "$gitDir"/shortcuts
+            printf "\n%s\n" "Shortcut(s) deleted"
+         fi
+         ;;
+         
+      ## EDIT shortcut
+      "-e"|"--edit")
+         # List shortcuts, choose which to edit
+         printf "%s\n\n" "Saved shortcuts:"
+         cat "$gitDir"/shortcuts
+         printf "\n%s\n" "Enter shortcut number to edit [or nothing to cancel]:"
+         read -r input
+         
+         # Find if shortcut exists
+         line=$(findShortcut "$input")
+         if [ -z "$line" ]; then
+            exit
+         else
+            # Shortcut found
+            # Trim shortcut number from command string, save number
+            if [[ $line =~ (^[^:]*)(\: )(.*) ]]; then
+               num=${BASH_REMATCH[1]}
+               cmd=${BASH_REMATCH[3]}
+            else
+               printf "Error: How...\n"
+               exit
+            fi
+            
+            # Allow editing of cmd
+            printf "\n%s\n" "Edit, press enter to confirm:"
+            read -r -i "$cmd" -e newCmd
+            # Replace shortcut in file
+            sed -i "${num}s/.*/${num}: $newCmd/" "$gitDir"/shortcuts
+            printf "%s\n" "Shortcut edited"
+         fi
+         ;;
+      
+      ## LIST shortcuts only
+      "-l"|"--list")
+         printf "%s\n\n" "Saved shortcuts:"
+         cat "$gitDir"/shortcuts
+         ;;
+      
+      ## HELP
+      "-h"|"--help"|\?)
+         printf "\nUse shortcuts:\n    git shortcut\n"
+         printf "    To instantly use one or more, follow with space delimited integers\n"
+         printf "    Example: \"git shortcut 1 2 3\"\n\n"
+         printf "Create shortcut:\n    git shortcut <-n | --new> [-r | --run] \"command\"\n"
+         printf "    To save a command with runtime parameters, use < >\n"
+         printf "    Example: \"git commit -m <msg>>\"\n"
+         printf "    Optional:\n"
+         printf "    -r|--run  =  Run cmd after saving as shortcut\n\n"
+         printf "Delete shortcut:\n    git shortcut <-d | --delete>\n\n"
+         printf "Edit shortcut:\n    git shortcut <-e | --edit>\n\n"
+         printf "List shortcuts:\n    git shortcut <-l | --list>\n"
+         ;;
+      
+      ## RUN (Multiple) OR ERROR
+      *)
+         # Loop over args
+         while [[ $# -gt 0 ]]; do
+            # If arg is an integer, check if shortcut exists and run
+            if [[ $1 =~ ^[0-9]+$ ]]; then
+               num=$1
+               # Find if shortcut exists
+               line=$(findShortcut "$num")
+               if [ -z "$line" ]; then
+                  # Exit so that following commands don't run after error
+                  exit
+               else
+                  # Shortcut found
+                  runShortcut "$line"
+                  # Shift to process next arg
+                  shift
+               fi
+            else
+               # Unexpected param, error
+               printf "\n%s\n\n" "Unexpected parameter \"$1\""
+               printf "Enter \"git shortcut -h\" for help.\n"
+               exit
+            fi
+         done
+         ;;
+   esac
+fi
