@@ -3,12 +3,6 @@
 ### git-shortcut ###
 ####################
 
-#tmtemp for readme
-# To ensure this script functions for each new bash shell:
-# cd ~/
-# touch .bash_profile
-# Edit .bash_profile and add "export PATH=$PATH:/your-directory/git-custom-commands"
-
 #############
 # FUNCTIONS #
 #############
