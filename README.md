@@ -1,7 +1,5 @@
 # git-Shortcut
-
-Custom git command to save/execute shortcuts.<br>
-Shortcuts are saved on a per repo basis.
+> Custom git command to save/execute shortcuts on a per repo basis.
 
 ## Table of Contents
 
@@ -89,10 +87,10 @@ $ git shortcut -l
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first
+Pull requests are welcome! For major changes, please open an issue first
 to discuss what you would like to change.
 
-Please make sure to check your modifications with [ShellCheck](https://github.com/koalaman/shellcheck)
+Please make sure to check your modifications with [ShellCheck](https://github.com/koalaman/shellcheck).
 
 ## License
 
