@@ -3,17 +3,22 @@
 Custom git command to save/execute shortcuts.<br>
 Shortcuts are saved on a per repo basis.
 
-<br>
+## Table of Contents
 
-## 'Install' Instructions
+1. [Install Instructions](#install-instructions)
+2. [How To Use](#how-to-use)
+    1. [Help](#help)
+    2. [Create Shortcuts](#create-shortcuts)
+    3. [Run Shortcuts](#run-shortcuts)
+    4. [Edit/Delete/List](#edit-shortcuts)
+
+## Install Instructions
 
 To ensure this script functions for each new bash shell:
 1. Save git-shortcut to (for example) /your-directory/git-custom-commands
 2. cd ~/
 3. touch .bash_profile
 4. Edit .bash_profile and add "export PATH=$PATH:/your-directory/git-custom-commands"
-
-<br>
 
 ## How To Use
 
