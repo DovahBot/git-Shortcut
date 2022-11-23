@@ -6,11 +6,13 @@ Shortcuts are saved on a per repo basis.
 ## Table of Contents
 
 1. [Install Instructions](#install-instructions)
-2. [How To Use](#how-to-use)
+2. [Usage](#usage)
     1. [Help](#help)
     2. [Create Shortcuts](#create-shortcuts)
     3. [Run Shortcuts](#run-shortcuts)
     4. [Edit/Delete/List](#edit-shortcuts)
+3. [Contributing](#contributing)
+4. [License](#license)
 
 ## Install Instructions
 
@@ -20,14 +22,14 @@ To ensure this script functions for each new bash shell:
 3. touch .bash_profile
 4. Edit .bash_profile and add "export PATH=$PATH:/your-directory/git-custom-commands"
 
-## How To Use
+## Usage
 
-### Help
+#### Help
 ```bash
 $ git shortuct ?
 ```
 
-### Create Shortcuts
+#### Create Shortcuts
 ```bash
 # Create a simple shortcut
 $ git shortuct -n "git status"
@@ -44,7 +46,7 @@ $ git shortuct -n "git commit -m <msg>"
 Shortcut added as #2
 ```
 
-### Run Shortcuts
+#### Run Shortcuts
 ```bash
 # List shortcuts first
 $ git shortcut
@@ -67,20 +69,31 @@ Enter value for param <msg>:  Init commit
 ... git commit -m "Init commit" runs
 ```
 
-### Edit Shortcuts
+#### Edit Shortcuts
 ```bash
 # List and select shortcut to edit
 $ git shortcut -e
 ```
 
-### Delete Shortcuts
+#### Delete Shortcuts
 ```bash
 # List and select shortcut to delete
 $ git shortcut -d
 ```
 
-### List Shortcuts
+#### List Shortcuts
 ```bash
 # Only list shortcuts
 $ git shortcut -l
 ```
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first
+to discuss what you would like to change.
+
+Please make sure to check your modifications with [ShellCheck](https://github.com/koalaman/shellcheck)
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
